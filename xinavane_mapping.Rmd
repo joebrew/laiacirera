@@ -29,6 +29,7 @@ library(readxl)
 man <- cism::man3
 mag <- cism::mag3
 map <- rbind(man, mag)
+moz <- cism::moz3
 
 # Plot the combined map
 plot(map)
@@ -75,6 +76,7 @@ df <- df_sp@data
 
 # Plot and color by district
 map_ex <- fortify(map, id = 'OBJECTID')
+moz_ez <- fortify(moz, id = 'OBJECTID')
 
 ggplot() +
   geom_polygon(data = map_ex,
@@ -90,4 +92,126 @@ ggplot() +
              size = 0.7,
              alpha = 0.7) +
   theme_cism()
+```
+
+# Create the lines
+
+```{r}
+mozy <- moz2[moz2@data$NAME_1 == 'Maputo',]
+# Create the red line
+red_line1 <- rgeos::gIntersection(man, mag)
+red_line2 <- rgeos::gIntersection(mag[mag@data$NAME_3 == 'Magude',],
+                                  mozy[mozy@data$NAME_2 == 'Moamba',])
+red_line <- rbind(red_line1, red_line2)
+# Create the green line
+green_line1 <- rgeos::gIntersection(man[man@data$NAME_3 != 'Xinavane',],
+                                    rbind(mag,
+                                          man[man@data$NAME_3 == 'Xinavane',]))
+green_line2 <- rgeos::gIntersection(mag[mag@data$NAME_3 == 'Magude',],
+                                  mozy[mozy@data$NAME_2 == 'Moamba',])
+green_line <- rbind(green_line1, green_line2)
+
+plot(mozy)
+plot(green_line, add = T, col = 'green', lwd = 2)
+plot(red_line, add = T, col = 'red')
+points(df_sp, pch = '.')
+```
+
+# Import the full census data
+
+```{r}
+census <- maragra::census
+plot(mozy)
+points(census$longitude, census$latitude, pch = '.')
+```
+
+# Calculate vars in df
+
+## Calculate distances to lines
+
+```{r}
+library(geosphere)
+distances <- c(500, 1000, 5000)
+line_colors <- c('red', 'green')
+geos <- c('man', 'mag', 'xin', 'other')
+for(i in 1:length(line_colors)){
+  this_color <- line_colors[i]
+  this_line <- get(paste0(this_color, '_line'), envir = .GlobalEnv)
+  df[,paste0('distance_to_', this_color, '_line')] <- NA
+  vals <- dist2Line(p = df_sp,
+            line = this_line)
+  df[,paste0('distance_to_', this_color, '_line')] <- vals[,1]
+}
+```
+
+## Calculate distances to other points
+
+```{r}
+# Transform data to projected
+xin <- man[man@data$NAME_3 == 'Xinavane',]
+other <- mozy[!mozy@data$NAME_2 %in% c('Manhiça', 'Magude'),]
+census_sp <- census[!is.na(census$longitude),]
+coordinates(census_sp) <- ~longitude + latitude
+proj4string(census_sp) <- proj4string(moz0)
+census_sp_proj <- spTransform(census_sp, CRSobj = '+proj=laea +lat_0=5 +lon_0=20 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs')
+df_sp_proj <- spTransform(df_sp, CRSobj = '+proj=laea +lat_0=5 +lon_0=20 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs')
+man_proj <- spTransform(man, CRSobj = '+proj=laea +lat_0=5 +lon_0=20 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs')
+mag_proj <- spTransform(mag, CRSobj = '+proj=laea +lat_0=5 +lon_0=20 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs')
+map_proj <- spTransform(map, CRSobj = '+proj=laea +lat_0=5 +lon_0=20 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs')
+xin_proj <- spTransform(xin, CRSobj = '+proj=laea +lat_0=5 +lon_0=20 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs')
+other_proj <- spTransform(other, CRSobj = '+proj=laea +lat_0=5 +lon_0=20 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs')
+distances <- c(500, 1000, 5000)
+geos <- c('man', 'mag', 'xin', 'other', 'all')
+hh <- c('individuals', 'households')
+
+library(rgeos)
+for(d in 1:length(distances)){
+  for(g in 1:length(geos)){
+    for(h in 1:length(hh)){
+      column_name <- paste0(this_hh, '_',
+                   this_geo, '_',
+                   this_distance, '_meters')
+      df[,column_name] <- NA
+      for(i in 1:nrow(df)){
+        message(i)
+        this_point <- df_sp_proj[i,]
+        this_distance <- distances[d]
+        this_geo <- geos[g]
+        this_hh <- hh[h]
+        # Create the buffer
+        the_buffer <- gBuffer(this_point,
+                              width = this_distance)
+          # Get the correct polygon
+        c('man', 'mag', 'xin', 'other', 'all')
+        if(this_geo == 'man'){
+          this_polygon <- man_proj
+        } else if(this_geo == 'mag'){
+          this_polygon <- mag_proj
+        } else if(this_geo == 'xin'){
+          this_polygon <- xin_proj
+        } else if(this_geo == 'all'){
+          this_polygon <- map_proj
+        } else {
+          this_polygon <-other_proj
+        }
+        
+        # Get houses in the geo only
+        these_hhs <- census_sp_proj[!is.na(over(census_sp_proj, polygons(this_polygon))),]
+        
+        # Get houses in the buffer only
+        keep <- these_hhs[!is.na(over(these_hhs, polygons(the_buffer))),]
+        keep$hhid <- substr(keep$perm_id, 1, 8)
+        
+        # If its households, get the count, otherwise, the sum
+        if(hh == 'individuals'){
+          val <- nrow(keep)
+        } else {
+          val <- length(unique(keep$hhid))
+        }
+        df[i,column_name] <- val
+      }
+    }
+  }
+}
+write_csv(df, '~/Desktop/data_for_laia.csv')
 ```
