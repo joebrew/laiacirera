@@ -94,6 +94,37 @@ ggplot() +
   theme_cism()
 ```
 
+# Another map
+
+```{r}
+mag2 <- readOGR('from_bea/Magude_Adm2/')
+man2 <- readOGR('from_bea/Manhiça_Adm2/')
+mag2@data <- mag2@data %>% dplyr::select(NAME_2)
+man2@data <- man2@data %>% mutate(NAME_2 = 'Manhica') %>%  dplyr::select(NAME_2)
+
+map <- rbind(mag2, man2)
+mapez<- fortify(map, id = 'NAME_2')
+
+library(ggthemes)
+ggplot() +
+  geom_polygon(data = mapez,
+               aes(x = long,
+                   y = lat,
+                   group = group),
+               fill = NA,
+               color = 'black') +
+  geom_point(data = df,
+             aes(x = lng,
+                 y = lat,
+                 color = district),
+             size = 0.7,
+             alpha = 0.7) +
+  theme_map() +
+  scale_color_manual(name = '',
+                     values = databrew::make_colors(4))
+
+```
+
 # Create the lines
 
 ```{r}
@@ -121,6 +152,7 @@ points(df_sp, pch = '.')
 
 ```{r}
 census <- maragra::census
+census$hhid <- substr(census$perm_id, 1, 8)
 plot(mozy)
 points(census$longitude, census$latitude, pch = '.')
 ```
@@ -166,18 +198,22 @@ hh <- c('individuals', 'households')
 
 library(rgeos)
 for(d in 1:length(distances)){
+  this_distance <- distances[d]
+  message(this_distance)
+
   for(g in 1:length(geos)){
+    message(g)
+    this_geo <- geos[g]
+    message(this_geo)
     for(h in 1:length(hh)){
+      this_hh <- hh[h]
       column_name <- paste0(this_hh, '_',
                    this_geo, '_',
                    this_distance, '_meters')
       df[,column_name] <- NA
       for(i in 1:nrow(df)){
-        message(i)
+        # message(i)
         this_point <- df_sp_proj[i,]
-        this_distance <- distances[d]
-        this_geo <- geos[g]
-        this_hh <- hh[h]
         # Create the buffer
         the_buffer <- gBuffer(this_point,
                               width = this_distance)
@@ -200,7 +236,7 @@ for(d in 1:length(distances)){
         
         # Get houses in the buffer only
         keep <- these_hhs[!is.na(over(these_hhs, polygons(the_buffer))),]
-        keep$hhid <- substr(keep$perm_id, 1, 8)
+        
         
         # If its households, get the count, otherwise, the sum
         if(hh == 'individuals'){
@@ -210,6 +246,7 @@ for(d in 1:length(distances)){
         }
         df[i,column_name] <- val
       }
+      write_csv(df, '~/Desktop/data_for_laia.csv')
     }
   }
 }
