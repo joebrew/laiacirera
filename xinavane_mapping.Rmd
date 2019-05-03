@@ -125,6 +125,43 @@ ggplot() +
 
 ```
 
+# School map
+
+```{r}
+mag2 <- readOGR('from_bea/Magude_Adm2/')
+man2 <- readOGR('from_bea/Manhiça_Adm2/')
+mag2@data <- mag2@data %>% dplyr::select(NAME_2)
+man2@data <- man2@data %>% mutate(NAME_2 = 'Manhica') %>%  dplyr::select(NAME_2)
+
+map <- rbind(mag2, man2)
+mapez<- fortify(map, id = 'NAME_2')
+
+schools <- read_csv('school_coordinates.csv') %>%
+  mutate(district_number = 
+           ifelse(district_number == '01',
+                  'Manhiça',
+                  'Magude'))
+
+library(ggthemes)
+ggplot() +
+  geom_polygon(data = mapez,
+               aes(x = long,
+                   y = lat,
+                   group = group),
+               fill = NA,
+               color = 'black') +
+  geom_point(data = schools,
+             aes(x = lng,
+                 y = lat,
+                 color = district_number),
+             size = 2,
+             alpha = 0.7) +
+  theme_map() +
+  scale_color_manual(name = '',
+                     values = c('darkorange', 'darkgreen'))
+  # theme(legend.position = 'none')
+```
+
 # Create the lines
 
 ```{r}
