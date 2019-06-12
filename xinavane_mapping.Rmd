@@ -179,9 +179,17 @@ green_line2 <- rgeos::gIntersection(mag[mag@data$NAME_3 == 'Magude',],
                                   mozy[mozy@data$NAME_2 == 'Moamba',])
 green_line <- rbind(green_line1, green_line2)
 
+# Other lines (June request from Laia)
+library(sp)
+blue_line <- mag[mag@data$NAME_3 == 'Magude',]
+
+yellow_line <-  rgeos::gUnion(man[man@data$NAME_3 == 'Xinavane',],
+                    mag[mag@data$NAME_3 == 'Magude',])
+
 plot(mozy)
 plot(green_line, add = T, col = 'green', lwd = 2)
 plot(red_line, add = T, col = 'red')
+plot(blue_line, add = T, lwd = 0.5)
 points(df_sp, pch = '.')
 ```
 
@@ -201,9 +209,10 @@ points(census$longitude, census$latitude, pch = '.')
 ```{r}
 library(geosphere)
 distances <- c(500, 1000, 5000)
-line_colors <- c('red', 'green')
+line_colors <- c('red', 'green', 'blue', 'yellow')
 geos <- c('man', 'mag', 'xin', 'other')
 for(i in 1:length(line_colors)){
+  # message(i, ' of ', length(line_colors))
   this_color <- line_colors[i]
   this_line <- get(paste0(this_color, '_line'), envir = .GlobalEnv)
   df[,paste0('distance_to_', this_color, '_line')] <- NA
@@ -279,7 +288,7 @@ for(d in 1:length(distances)){
         if(hh == 'individuals'){
           val <- nrow(keep)
         } else {
-          val <- length(unique(keep$hhid))
+          val <- length(unique(keep$perm_id))
         }
         df[i,column_name] <- val
       }
