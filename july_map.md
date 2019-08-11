@@ -203,3 +203,64 @@ legend('topright',
 ```
 
 ![](figures/unnamed-chunk-8-1.png)<!-- -->
+
+## Xinavane and Magude, 3 colors -magude, xinavane, moamba+manhiça
+
+``` r
+f <- read_excel('data/TONGAT_POINTS.xlsx')
+
+# Convert to spatial
+df_sp <- df %>% mutate(lng = x, lat = y)
+coordinates(df_sp) <- ~x+y
+proj4string(df_sp) <- proj4string(moz2)
+# Get which district each point is in
+man <- cism::man3
+mag <- cism::mag3
+moa <- moz3[moz3@data$NAME_2 %in% c('Moamba'),]
+map <- rbind(man, mag, moa)
+map@data$district <- ifelse(map@data$NAME_3 == 'Xinavane', 'Xinavane',
+               ifelse(map@data$NAME_2 %in% c('Manhiça', 'Moamba'), 'Manhiça/Moamba',
+                      'Magude'))
+df_sp@data$district <- 
+    map@data$district[over(df_sp, polygons(map))]
+cols <- c('red', 'blue', 'orange')
+colors <- ifelse(df_sp@data$district == 'Xinavane', cols[1],
+               ifelse(df_sp@data$district %in% c('Manhiça/Moamba'), cols[2],
+                      cols[3]))
+plot(map, col = 'grey')
+points(df_sp, col = colors, pch = '.', cex = 2)
+legend('topright',
+       col = cols,
+       pch = '.',
+       pt.cex = 5,
+       legend = c('Xinavane', 'Manhiça/Moamba', 'Magude'))
+```
+
+![](figures/unnamed-chunk-9-1.png)<!-- -->
+
+2)  Xinavane, Magude, Moamba district i Manhiça district -exceptuant
+    xinavane- amb colors diferents (total de 4 colors diferents).
+
+<!-- end list -->
+
+``` r
+cols <- c('red', 'blue', 'orange', 'purple')
+
+map@data$district <- ifelse(map@data$NAME_3 == 'Xinavane', 'Xinavane',
+               ifelse(map@data$NAME_2 == 'Manhiça', 'Manhiça',
+                      ifelse(map@data$NAME_2 == 'Moamba', 'Moamba', 'Magude')))
+df_sp@data$district <- 
+    map@data$district[over(df_sp, polygons(map))]
+colors <- ifelse(df_sp@data$district == 'Xinavane', cols[1],
+               ifelse(df_sp@data$district %in% c('Manhiça'), cols[2],
+                      ifelse(df_sp@data$district == 'Moamba', cols[3], cols[4])))
+plot(map, col = 'grey')
+points(df_sp, col = colors, pch = '.', cex = 2)
+legend('topright',
+       col = cols,
+       pch = '.',
+       pt.cex = 5,
+       legend = c('Xinavane', 'Manhiça', 'Moamba', 'Magude'))
+```
+
+![](figures/unnamed-chunk-10-1.png)<!-- -->
