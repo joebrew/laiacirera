@@ -160,3 +160,46 @@ legend('right',
 ```
 
 ![](figures/unnamed-chunk-6-1.png)<!-- -->
+
+# Extra maps
+
+## Xinavane and Magude, 3 colors -magude, xinavane, moamba+manhiça
+
+``` r
+man <- cism::man3
+mag <- cism::mag3
+moa <- moz3[moz3@data$NAME_2 %in% c('Moamba'),]
+map <- rbind(man, mag, moa)
+cols <- c('red', 'blue', 'orange')
+colors <- ifelse(map@data$NAME_3 == 'Xinavane', cols[1],
+               ifelse(map@data$NAME_2 %in% c('Manhiça', 'Moamba'), cols[2],
+                      cols[3]))
+plot(map, col = colors)
+legend('topright',
+       fill = cols,
+       legend = c('Xinavane', 'Manhiça/Moamba', 'Magude'))
+```
+
+![](figures/unnamed-chunk-7-1.png)<!-- -->
+
+2)  Xinavane, Magude, Moamba district i Manhiça district -exceptuant
+    xinavane- amb colors diferents (total de 4 colors diferents).
+
+<!-- end list -->
+
+``` r
+man <- cism::man3
+mag <- cism::mag3
+moa <- moz3[moz3@data$NAME_2 %in% c('Moamba'),]
+map <- rbind(man, mag, moa)
+cols <- c('red', 'blue', 'orange', 'purple')
+colors <- ifelse(map@data$NAME_3 == 'Xinavane', cols[1],
+               ifelse(map@data$NAME_2 == 'Manhiça', cols[2],
+                      ifelse(map@data$NAME_2 == 'Moamba', cols[3], cols[4])))
+plot(map, col = colors)
+legend('topright',
+       fill = cols,
+       legend = c('Xinavane', 'Manhiça', 'Moamba', 'Magude'))
+```
+
+![](figures/unnamed-chunk-8-1.png)<!-- -->
