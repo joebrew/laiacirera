@@ -242,9 +242,23 @@ north.arrow(x = xy[1],
             lab = 'North')
 xy_scale <- c(32.79994, -25.76573) #use locator()
 library(maps)
-maps::map.scale(xy_scale[1], xy_scale[2], ratio=FALSE, relwidth=0.2)  
+maps::map.scale(xy_scale[1], xy_scale[2], ratio=FALSE, relwidth=0.2)
 
+```
 
+## Interactive visualization (to confirm distances)
 
+```{r}
+library(leaflet)
+leaflet() %>%
+  addProviderTiles(providers$OpenStreetMap) %>%
+  addPolygons(data = map) %>%
+  # addPolylines(data = magude_border, col = 'red') %>%
+  addCircleMarkers(lng = df_sp_proj$lng,
+                   # radius = 0.1,
+                   # stroke = FALSE,
+                   clusterOptions = markerClusterOptions(),
+             lat = df_sp_proj$lat,
+             popup = paste0(as.character(round(df_sp_proj@data$distance_to_magude_border, digits = 1)), ' meters from Magude border')) 
 ```
 

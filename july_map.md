@@ -261,6 +261,15 @@ legend('topright',
        pch = '.',
        pt.cex = 5,
        legend = c('Xinavane', 'Manhiça', 'Moamba', 'Magude'))
+library(GISTools)
+xy = c(33.40130, -24.73163) #use locator() to get the x,y values for arrow placement
+north.arrow(x = xy[1],
+            yb = xy[2],
+            len = 0.04,
+            lab = 'North')
+xy_scale <- c(32.79994, -25.76573) #use locator()
+library(maps)
+maps::map.scale(xy_scale[1], xy_scale[2], ratio=FALSE, relwidth=0.2)  
 ```
 
 ![](figures/unnamed-chunk-10-1.png)<!-- -->
