@@ -8,6 +8,7 @@ library(cism)
 library(sp)
 library(rgdal)
 library(readxl)
+library(rgeos)
 
 # Get maps and combine
 man <- cism::man3
@@ -105,11 +106,22 @@ magude_border <- bound <- as(magude_border, 'SpatialLinesDataFrame')
 magude_border <- spTransform(magude_border, CRS('+proj=laea +lat_0=5 +lon_0=20 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs'))
 df_sp_proj <- spTransform(df_sp, CRS('+proj=laea +lat_0=5 +lon_0=20 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs'))
 df_sp_proj@data$distance_to_magude_border <- NA
+df_sp_proj@data$distance_to_expanded_magude_border <- NA
+
+keep <- moz3[moz3@data$NAME_2 %in% c('Magude') | moz3@data$NAME_3 == 'Xinavane',]
+keepy <- gUnaryUnion(keep)
+keepy <- SpatialPolygonsDataFrame(Sr = keepy, data = data.frame(id = 1:length(keepy)))
+keepy <- as(keepy, 'SpatialLinesDataFrame')
+keepy <- spTransform(keepy, CRS('+proj=laea +lat_0=5 +lon_0=20 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs'))
+
 for(i in 1:nrow(df_sp)){
   this_location <- df_sp_proj[i,]
   distance <- rgeos::gDistance(this_location,
                                magude_border)
+  disance_var <- rgeos::gDistance(this_location,
+                                  keepy)
   df_sp_proj@data$distance_to_magude_border[i] <- distance
+  df_sp_proj@data$distance_to_expanded_magude_border[i] <- disance_var
 }
 write_csv(df_sp_proj@data, 'distance_to_magude_border.csv')
 ```
@@ -127,7 +139,7 @@ colour.
 
 ``` r
 keep <- moz2[moz2@data$NAME_2 %in% c('Magude', 'Manhiça', 'Moamba'),]
-
+keepy <- gUnaryUnion(keep)
 
 x <- moz3@data$NAME_3[over(df_sp, polygons(moz3))]
 df_sp@data$district2 <- x
@@ -269,7 +281,26 @@ north.arrow(x = xy[1],
             lab = 'North')
 xy_scale <- c(32.79994, -25.76573) #use locator()
 library(maps)
-maps::map.scale(xy_scale[1], xy_scale[2], ratio=FALSE, relwidth=0.2)  
+maps::map.scale(xy_scale[1], xy_scale[2], ratio=FALSE, relwidth=0.2)
 ```
 
 ![](figures/unnamed-chunk-10-1.png)<!-- -->
+
+## Interactive visualization (to confirm distances)
+
+``` r
+library(leaflet)
+leaflet() %>%
+  addProviderTiles(providers$OpenStreetMap) %>%
+  addPolygons(data = map) %>%
+  # addPolylines(data = magude_border, col = 'red') %>%
+  addCircleMarkers(lng = df_sp_proj$lng,
+                   # radius = 0.1,
+                   # stroke = FALSE,
+                   clusterOptions = markerClusterOptions(),
+             lat = df_sp_proj$lat,
+             popup = paste0(as.character(round(df_sp_proj@data$distance_to_magude_border, digits = 1)), ' meters from Magude border;  ',
+                            as.character(round(df_sp_proj@data$distance_to_expanded_magude_border, digits = 1)), ' meters from expanded Magude border (including Xinavane)')) 
+```
+
+(deployed to joebrew.net/laia)
